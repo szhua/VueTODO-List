@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>测试VUE</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/bootstrap.css">
+    <script src="js/vue.min.js"></script>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/vue-resource.js"></script>
+    <script>
+
+        $(function () {
+
+            function showERRO(resp) {
+                resp.json().then(function (result) {
+                    console.error('errorMsg:' + result.message);
+                })
+            }
+
+
+            var vm = new Vue({
+                el: '#vm',
+                //规定时间
+                http: {
+                    timeout: 5000
+                },
+                //创建调用
+                created: function(){
+                    this.init();
+                },
+                methods: {
+                    //定义函数
+                    init: function () {
+                        var that = this;
+                        that.loading = true;
+                        this.$resource('/api/todos').get().then(function (resp) {
+                            that.loading = false;
+                            resp.json().then(function (result) {
+                                that.todos = result.data;
+                            })
+                        }, function (resp) {
+                            showERRO(resp);
+                            that.loading = false;
+                        })
+                    },
+                    create:function(todo){
+                        console.log(todo)
+                        var that =this ;
+                         this.$resource('../api/todos').save(todo).then(function(resp){
+                             this.loading =false ;
+                             resp.json().then(function(result){
+                                if(result.data){
+                                    that.todos.push(result.data);
+                                }else{
+                                    alert(result.message) ;
+                                }      
+                             });
+                         },function (resp) {
+                            showERRO(resp);
+                            that.loading = false;
+                        })
+                    },
+                remove:function(todo){
+                    var that =this ;
+                    this.$resource('../api/todos/'+todo.id).delete().then(function(resp){
+                        this.loading =false ;
+                        resp.json().then(function(result){
+                            if(result.data){
+                                //测试用；；
+                                that.todos.splice(result.index,1);
+                                console.log(result) ;    
+                            }else{
+                                alert(result.code);
+                            }
+                        });
+                    } ,function(resp){
+                        showERRO(resp);
+                            that.loading = false;
+                    } )
+                },
+                update:function(todo,prop,e){
+                    var that =this ;
+
+                    var t ={
+                        name :todo.name ,
+                        description :todo.description 
+                    } 
+                   
+                    t[prop] =e.target.innerText ;
+                    
+                    if(t[prop]===todo[prop]){
+                        return ;
+                    }
+
+                    //使用updatae 内部进行内容的封装；
+                    this.$resource('../api/todos/'+todo.id).update(t).then(function(resp){
+                        this.loading =false ;
+                        resp.json().then(function(r){
+                            if(r.data){
+                                //测试用；；
+                                todo.name = r.data.name;
+                                todo.description = r.data.description;
+
+                            }else{
+                               e.target.innerText = todo[prop];
+                    showError(resp);
+                            }
+                        });
+                    } ,function(resp){
+                        showERRO(resp);
+                            that.loading = false;
+                    } )
+                }    
+
+                },
+                data: {
+                    title: "TODO-List!!",
+                    todos: []
+                }
+            });
+            window.vm = vm;
+
+
+            //添加todo ;
+            var addTodo =new Vue({
+                el:'#vmAdd',
+                data:{
+                    name:'',
+                    description:'' 
+                },
+                methods:{
+                    submit:function(){
+                       window.vm.create(this.$data) ;  
+                       this.name ='' ;
+                       this.description ='' ;
+                    }
+                }
+
+            }) ;  
+
+          
+
+
+        });
+
+      
+             
+
+
+
+
+
+    </script>
+
+
+
+</head>
+
+<body>
+
+
+    <!--Part1-->
+    <header class="navbar navbar-static-top">
+
+        <div class="container">
+
+            <div class="navbar-header">
+                <a href="/" class="navbar-brand">Learn JavaScript</a>
+            </div>
+
+            <nav class="collapse navbar-collapse" id="bs-navbar">
+                <ul class="nav navbar-nav">
+                    <li>
+                        <a target="" href="/">Get Courses</a>
+                    </li>
+                    <li>
+                        <a target="" href="/">Source Code</a>
+                    </li>
+                    <li>
+                        <a target="" href="/">Resource</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+
+    </header>
+
+    <!----Part2 getStart adv-->
+
+    <div id="important" style="color:#cdbfe3; background-color:#6f5499; padding:30px 0; margin:-20px 0 20px 0;">
+        <div class="container">
+            <h1 style="color:#fff; font-size:60px">Getting started</h1>
+            <p style="font-size:24px; line-height:48px">Learn JavaScript, Node.js, npm, koa2, Vue, babel, etc. at liaoxuefeng.com.</p>
+        </div>
+    </div>
+
+    <!--Part3 main container !!-->
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">
+                            <span class="glyphicon glyphicon-th-list"></span> MVVM</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div id="vm">
+                            <h3 v-text="title"></h3>
+                            <ol>
+                                <li v-for="t in todos" v-if="todos">
+                                    <dl>
+                                        <dt contenteditable="true" v-on:blur="update(t,'name',$event)" v-text='t.name' ></dt>
+                                        <dd contenteditable="true" v-on:blur="update(t,'description',$event)" v-text='t.descrition' ></dd>
+                                        <dd><a href="#0" v-on:click="remove(t)">Delete</a></dd>
+                                    </dl>
+                                </li>
+                            </ol>
+                        </div>
+                        <hr>
+                        
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="panel panel-default">
+
+                       <div class="panel-heading">
+                           <h3 class="panel-title"><span class="glyphicon glyphicon-plus"></span> Add New Todo</h3>
+                       </div>
+                       <div class="panel-body">
+                           <form id="vmAdd" v-on:submit.prevent='submit'  action="#0" >
+
+                                <div class="form-group">
+                                    <label>Name:</label>
+
+                                    <!--使用v-mode进行绑定-->
+                                    <input type="text" v-model='name' class="form-control" placeholder="enterME"></input>
+                                </div>
+                                
+                                <div class="form-group">
+                                        <label>Descripiton:</label>
+                                        <!--使用v-mode进行绑定-->
+                                        <input type="text" v-model='description' class="form-control" placeholder="enterME"></input>
+                               </div>
+
+                               <button type="submit" class="btn btn-button">ADD</button>
+                           </form>
+                       </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+
+
+
+
+</body>
+
+</html>
